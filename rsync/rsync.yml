@@ -1,0 +1,71 @@
+---
+- name: install ntp
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Packages
+      yum: 
+        name:
+          - ntp
+        state: latest
+    
+    - name: Start and Enable ntp
+      service:
+        name: ntpd
+        state: started
+        enabled: yes
+
+- name: mount
+  hosts: all
+  become: yes
+  vars:
+    file_system: xfs
+    device: /dev/sdb
+    mount_point: "{{ dirname }}"
+  tasks:
+    - name: mkfs
+      filesystem:
+        fstype: "{{ file_system }}"
+        dev: "{{ device }}"
+
+    - name: make mount point
+      file:
+        path: "{{ mount_point }}"
+
+    - name: mount disk
+      mount:
+        src: "{{ device }}"
+        fstype: "{{ file_system }}"
+        path: "{{ mount_point }}"
+        opts: defaults
+        state: mounted
+
+
+- name: create rsync cluster
+  hosts: master
+  become: yes
+  vars:
+    ip_address: '{{ hostvars["node"].ansible_default_ipv4.address}}'
+  tasks:
+    - name: install expect and rsync
+      yum:
+        name:
+          - expect
+          - rsync
+        state: latest
+
+    - name: set rsync script
+      template:
+        src: rsync.sh
+        dest: ~/rsync.sh
+        owner: root
+        group: root
+        mode: 0740
+
+    - name: add cron
+      cron:
+        name: "rsync active to stanby"
+        minute: "0"
+        job: "/root/rsync.sh"
+      
+      

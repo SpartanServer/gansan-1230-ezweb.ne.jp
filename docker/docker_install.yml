@@ -1,0 +1,59 @@
+---
+- name: install docker
+  hosts: all
+  become: yes
+  tasks:
+    - name: install yum-utils
+      yum:
+        name: yum-utils
+        state: present
+    
+    - name: install epel
+      yum:
+        name: epel-release
+        state: latest
+    
+    - name: install pip
+      yum:
+        name: python-pip
+        state: present
+        enablerepo: epel
+
+    - name: pip install docker
+      pip:
+        name: docker
+        state: present
+
+    - name: add docker repo
+      shell: "yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
+      args:
+        chdir: "/etc/yum.repos.d"
+        creates: docker-ce.repo
+
+    - name: install docker-ce
+      yum:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
+#    - name: enable remote docker
+#      replace:
+#        dest: /lib/systemd/system/docker.service
+#        regexp: '^ExecStart.*$'
+#        replace: 'ExecStart=/usr/bin/dockerd -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock'
+#        backup: yes
+
+#    - name: open firewall 2375
+#      firewalld:
+#        port: 2375/tcp
+#        permanent: yes
+#        state: enabled
+
+    - name: restart docker
+      systemd:
+        name: docker.service
+        state: restarted
+        daemon_reload: yes
+        enabled: yes
