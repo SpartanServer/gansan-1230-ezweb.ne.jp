@@ -31,6 +31,8 @@
     - name: make mount point
       file:
         path: "{{ mount_point }}"
+        state: directory
+
 
     - name: mount disk
       mount:
@@ -40,12 +42,9 @@
         opts: defaults
         state: mounted
 
-
-- name: create rsync cluster
-  hosts: master
+- name: install package
+  hosts: all
   become: yes
-  vars:
-    ip_address: '{{ hostvars["node"].ansible_default_ipv4.address}}'
   tasks:
     - name: install expect and rsync
       yum:
@@ -53,7 +52,13 @@
           - expect
           - rsync
         state: latest
-
+    
+- name: create rsync cluster
+  hosts: master
+  become: yes
+  vars:
+    ip_address: '{{ hostvars["node"].ansible_default_ipv4.address}}'
+  tasks:
     - name: set rsync script
       template:
         src: rsync.sh
